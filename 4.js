@@ -4,6 +4,9 @@ const path = require('path');
 const get = require('lodash/get');
 const slugify = require('slugify');
 
+// with for loop it took 1 hour and 45 minutes while with map it took 3 minutes
+// Map is first and with for loop it is at the bottom
+
 function getFileExt(type) {
     switch(type){
         case 'react':
@@ -17,55 +20,109 @@ function getFileExt(type) {
 
 (async () => {
     try {
-        const trees = JSON.parse(fs.readFileSync('./components1.json', 'utf8'));
+        const trees = JSON.parse(fs.readFileSync('./components2.json', 'utf8'));
         const token = fs.readFileSync('./token.txt', 'utf8');
 
-        for (let i =0; i<trees.length;i++) {
-            const node = trees[i];
-            const codes = Object.keys(node.code);
-            const fileName = slugify(node.name).replace(/_/g,'-').toLowerCase();
-            console.log(`[-] ${fileName}`)
-            for (let j =0;j <codes.length;j++) {
-                console.log(`+ Downloading ${codes[j]} code...`)
-                const codeUrl = node.code[codes[j]];
-                const {body} = await got(codeUrl, {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36',
-                        'Authorization': `Bearer ${token}`,
-                        'Referer': 'https://app.tailwinduikit.com/'
-                    },
-                    responseType: 'json'
-                });
+       await trees.map(async (_,i,array)=>{
+           try {
+               const node = array[i];
+               const codes = Object.keys(node.code);
+               const fileName = slugify(node.name).replace(/_/g,'-').toLowerCase();
+               console.log(`[-] ${fileName}`)
+               await Promise.all(codes.map(async (_,j)=>{
+                   try {
+                       console.log(`+ Downloading ${codes[j]} code...`)
+                       const codeUrl = node.code[codes[j]];
+                       const {body} = await got(codeUrl, {
+                           headers: {
+                               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36',
+                               'Authorization': `Bearer ${token}`,
+                               'Referer': 'https://app.tailwinduikit.com/'
+                           },
+                           responseType: 'json'
+                       });
 
-                if(body && body.success) {
-                    fs.mkdirSync(node.path, { recursive: true });
-                    let content = get(body, 'data.script');
-                    if(content) {
-                        fs.writeFileSync(path.join(node.path, `${fileName}.${codes[j]}.${getFileExt(codes[j])}`), content, 'utf8');
-                        content = get(body, 'data.html');
-                        if(content) {
-                            fs.writeFileSync(path.join(node.path, `${fileName}.${codes[j]}.component.html`), content, 'utf8');
-                        }
-                    }
+                       if(body && body.success) {
+                           fs.mkdirSync(node.path, { recursive: true });
+                           let content = get(body, 'data.script');
+                           if(content) {
+                               fs.writeFileSync(path.join(node.path, `${fileName}.${codes[j]}.${getFileExt(codes[j])}`), content, 'utf8');
+                               content = get(body, 'data.html');
+                               if(content) {
+                                   fs.writeFileSync(path.join(node.path, `${fileName}.${codes[j]}.component.html`), content, 'utf8');
+                               }
+                           }
 
-                    content = get(body, 'data.html');
-                    if(content) {
-                        fs.writeFileSync(path.join(node.path, `${fileName}.${codes[j]}.html`), content, 'utf8');
-                    }
+                           content = get(body, 'data.html');
+                           if(content) {
+                               fs.writeFileSync(path.join(node.path, `${fileName}.${codes[j]}.html`), content, 'utf8');
+                           }
 
-                    if(!get(body, 'data.script') && !get(body, 'data.html')) {
-                        console.log(body);
-                    }
-                } else {
-                    console.log(body)
-                }
+                           if(!get(body, 'data.script') && !get(body, 'data.html')) {
+                               console.log(body);
+                           }
+                       } else {
+                           console.log(body)
+                           await new Promise((resolve) => setTimeout(resolve, 1000));
+                       }
+                   } catch (e) {
+                       console.log(e)
+                   }
 
-                // delay 1s
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
+                   })
+               )
+           } catch (e) {
+               console.log(e)
+           }
 
-            console.log('');
-        }
+        })
+
+        // for (let i =0; i<trees.length;i++) {
+        //     const node = trees[i];
+        //     const codes = Object.keys(node.code);
+        //     const fileName = slugify(node.name).replace(/_/g,'-').toLowerCase();
+        //     console.log(`[-] ${fileName}`)
+        //     for (let j =0;j <codes.length;j++) {
+        //         console.log(`+ Downloading ${codes[j]} code...`)
+        //         const codeUrl = node.code[codes[j]];
+        //         const {body} = await got(codeUrl, {
+        //             headers: {
+        //                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36',
+        //                 'Authorization': `Bearer ${token}`,
+        //                 'Referer': 'https://app.tailwinduikit.com/'
+        //             },
+        //             responseType: 'json'
+        //         });
+        //
+        //         if(body && body.success) {
+        //             fs.mkdirSync(node.path, { recursive: true });
+        //             let content = get(body, 'data.script');
+        //             if(content) {
+        //                 fs.writeFileSync(path.join(node.path, `${fileName}.${codes[j]}.${getFileExt(codes[j])}`), content, 'utf8');
+        //                 content = get(body, 'data.html');
+        //                 if(content) {
+        //                     fs.writeFileSync(path.join(node.path, `${fileName}.${codes[j]}.component.html`), content, 'utf8');
+        //                 }
+        //             }
+        //
+        //             content = get(body, 'data.html');
+        //             if(content) {
+        //                 fs.writeFileSync(path.join(node.path, `${fileName}.${codes[j]}.html`), content, 'utf8');
+        //             }
+        //
+        //             if(!get(body, 'data.script') && !get(body, 'data.html')) {
+        //                 console.log(body);
+        //             }
+        //         } else {
+        //             console.log(body)
+        //         }
+        //
+        //         // delay 1s
+        //         // await new Promise((resolve) => setTimeout(resolve, 1000));
+        //     }
+        //
+        //     console.log('');
+        // }
 
         console.log('Download completed!');
     } catch (e) {

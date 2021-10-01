@@ -7,4 +7,4 @@ let link1 = []
 $(links).each(function(i, link){
    link1.push( $(link).attr('href'));
 });
-fs.writeFileSync('./links.txt', JSON.stringify(link1, null, 2), 'utf8');
+fs.writeFileSync('./links.json', JSON.stringify(link1, null, 2), 'utf8');

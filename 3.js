@@ -2,7 +2,7 @@
 const path = require('path');
 const fs = require("fs");
 
-const elements = fs.readFileSync('./array.json', 'utf8');
+const elements = JSON.parse(fs.readFileSync('./array2.json', 'utf8'));
 
 
 async function run() {
@@ -33,7 +33,7 @@ async function run() {
         }
 
     }
-    fs.writeFileSync('./components.json', JSON.stringify(treeList, null, 2), 'utf8');
+    fs.writeFileSync('./components2.json', JSON.stringify(treeList, null, 2), 'utf8');
 }
 
 run()
